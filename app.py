@@ -480,35 +480,80 @@ elif page == "📋 Country Profile":
     # ---- diet ----
     with tab_diet:
         st.subheader("Diet Composition & Macros")
-        last_year = country_df["Year"].max()
-        latest = country_df[country_df["Year"] == last_year]
 
-        st.markdown(f"Ditampilkan untuk tahun terakhir: **{last_year}**")
+        # Gabungan semua kolom diet yang mungkin ada
+        diet_cols_all = [
+            c for c in (diet_composition + diet_macros)
+            if c in country_df.columns
+        ]
 
-        c1, c2 = st.columns(2)
-        with c1:
-            comp_cols = diet_composition
-            if comp_cols:
-                long = latest.melt(
-                    id_vars=["Country", "Year"],
-                    value_vars=comp_cols,
-                    var_name="Component",
-                    value_name="Share",
-                )
-                fig = px.bar(long, x="Component", y="Share", title="Diet composition (proporsi kalori)")
-                fig.update_layout(xaxis_tickangle=-45)
-                st.plotly_chart(fig, use_container_width=True)
+        # Cari tahun terakhir yang PUNYA data diet (tidak semua NaN)
+        diet_years = []
+        for y in sorted(country_df["Year"].unique()):
+            sub_y = country_df[country_df["Year"] == y]
+            if sub_y[diet_cols_all].notna().any().any():
+                diet_years.append(y)
 
-        with c2:
-            if diet_macros:
-                long = latest.melt(
-                    id_vars=["Country", "Year"],
-                    value_vars=diet_macros,
-                    var_name="Macro",
-                    value_name="Calories",
-                )
-                fig = px.bar(long, x="Macro", y="Calories", title="Kalori dari protein, lemak, dan karbohidrat")
-                st.plotly_chart(fig, use_container_width=True)
+        if not diet_years:
+            st.info("Tidak ada data diet untuk negara & gender ini di dataset.")
+        else:
+            last_diet_year = diet_years[-1]
+            latest = country_df[country_df["Year"] == last_diet_year]
+
+            st.markdown(
+                f"Ditampilkan untuk tahun terakhir yang memiliki data diet: "
+                f"**{last_diet_year}**"
+            )
+
+            c1, c2 = st.columns(2)
+
+            # --- Grafik komposisi diet ---
+            with c1:
+                comp_cols = [
+                    c for c in diet_composition
+                    if c in latest.columns and latest[c].notna().any()
+                ]
+                if comp_cols:
+                    long = latest.melt(
+                        id_vars=["Country", "Year"],
+                        value_vars=comp_cols,
+                        var_name="Component",
+                        value_name="Share",
+                    )
+                    fig = px.bar(
+                        long,
+                        x="Component",
+                        y="Share",
+                        title="Diet composition (proporsi kalori)",
+                    )
+                    fig.update_layout(xaxis_tickangle=-45)
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("Tidak ada data komposisi diet untuk tahun ini.")
+
+            # --- Grafik makro kalori ---
+            with c2:
+                macro_cols = [
+                    c for c in diet_macros
+                    if c in latest.columns and latest[c].notna().any()
+                ]
+                if macro_cols:
+                    long = latest.melt(
+                        id_vars=["Country", "Year"],
+                        value_vars=macro_cols,
+                        var_name="Macro",
+                        value_name="Calories",
+                    )
+                    fig = px.bar(
+                        long,
+                        x="Macro",
+                        y="Calories",
+                        title="Kalori dari protein, lemak, dan karbohidrat",
+                    )
+                    fig.update_layout(xaxis_tickangle=-45)
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("Tidak ada data kalori makro untuk tahun ini.")
 
 
 # ============================================================
