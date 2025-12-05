@@ -3,10 +3,6 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
-# ============================================================
-#                KONFIGURASI UMUM APLIKASI
-# ============================================================
-
 st.set_page_config(
     page_title="Global Health, Nutrition & Economics Explorer",
     page_icon="🌍",
@@ -16,16 +12,11 @@ st.set_page_config(
 @st.cache_data
 def load_data():
     df = pd.read_csv("UnifiedDataset.csv")
-    # pastikan Year integer
     if "Year" in df.columns:
         df["Year"] = df["Year"].astype(int)
     return df
 
 df = load_data()
-
-# ------------------------------------------------------------
-#                  HELPER & KELOMPOK VARIABEL
-# ------------------------------------------------------------
 
 def cols_exist(names):
     """Ambil hanya nama kolom yang benar-benar ada di dataset."""
@@ -36,7 +27,6 @@ all_years = sorted(df["Year"].unique())
 all_genders = df["Gender"].unique().tolist()
 global_min_year, global_max_year = all_years[0], all_years[-1]
 
-# ==== Grup indikator utama ====
 health_core = cols_exist([
     "Life Expectancy",
     "Infant Mortality Rate",
@@ -201,7 +191,6 @@ diet_macros = cols_exist([
 
 numeric_cols = df.select_dtypes(include="number").columns.tolist()
 
-# ---- Tahun khusus untuk subset data (supaya tidak pernah kosong) ----
 def years_with_any(cols):
     ys = []
     for y in all_years:
@@ -211,21 +200,16 @@ def years_with_any(cols):
     return ys
 
 years_diet = years_with_any(diet_composition + diet_fruit + diet_veg_cereal)
-diet_min_year, diet_max_year = years_diet[0], years_diet[-1]  # 1990–2017
+diet_min_year, diet_max_year = years_diet[0], years_diet[-1]
 
 years_wash = years_with_any(wash)
-wash_min_year, wash_max_year = years_wash[0], years_wash[-1]  # 2000–2018
+wash_min_year, wash_max_year = years_wash[0], years_wash[-1]
 
-# Indikator yang bisa dipetakan di Global Map
 map_metrics = cols_exist(
     health_core
     + economics
     + ["Life Expectancy", "Death Rate", "Birth Rate"]
 )
-
-# ============================================================
-#                       SIDEBAR NAVIGASI
-# ============================================================
 
 st.sidebar.title("📊 Navigation")
 
@@ -246,12 +230,11 @@ page = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Dataset:** Global Health, Nutrition, Mortality & Economic Data")
-st.sidebar.markdown("Sumber: Kaggle – Miguel Roca")
+st.sidebar.markdown(
+    "Sumber: [Kaggle – Miguel Roca]"
+    "(https://www.kaggle.com/datasets/miguelroca/global-health-nutrition-mortality-economic-data)"
+)
 st.sidebar.markdown("**Author**  \nMuhammad Dimas Sudirman  \nNIM: 021002404001")
-
-# ============================================================
-#                           HOME
-# ============================================================
 
 if page == "🏠 Home":
     st.markdown(
@@ -303,11 +286,6 @@ if page == "🏠 Home":
     st.markdown("### 🔍 Contoh Data")
     st.dataframe(df.head(20))
 
-
-# ============================================================
-#                        GLOBAL MAP
-# ============================================================
-
 elif page == "🌍 Global Map":
     st.header("🌍 Global Map")
     st.write("Visualisasi indikator pada peta dunia untuk tahun dan gender tertentu.")
@@ -320,7 +298,6 @@ elif page == "🌍 Global Map":
 
     base = df[(df["Year"] == year) & (df["Gender"] == gender)]
 
-    # pilih hanya indikator yang punya data di kombinasi ini
     available_metrics = [
         m for m in map_metrics
         if m in base.columns and base[m].notna().any()
@@ -356,11 +333,6 @@ elif page == "🌍 Global Map":
             )
             st.plotly_chart(fig_hist, use_container_width=True)
 
-
-# ============================================================
-#                      COUNTRY PROFILE
-# ============================================================
-
 elif page == "📋 Country Profile":
     st.header("📋 Country Profile")
     st.write("Profil lengkap satu negara: tren kesehatan, polusi udara, demografi, ekonomi, dan gizi.")
@@ -373,7 +345,6 @@ elif page == "📋 Country Profile":
             index=all_countries.index("Indonesia") if "Indonesia" in all_countries else 0,
         )
 
-    # gender yang benar-benar ada untuk negara ini
     available_gender = sorted(df[df["Country"] == country]["Gender"].unique().tolist())
     default_gender = "Both sexes" if "Both sexes" in available_gender else available_gender[0]
 
@@ -401,7 +372,6 @@ elif page == "📋 Country Profile":
         ["🩺 Health", "💨 Air Pollution", "👨‍👩‍👧 Demography & Maternal", "💰 Economics", "🍽 Nutrition"]
     )
 
-    # ---- health ----
     with tab_health:
         st.subheader("Health & Mortality")
         metrics_to_plot = cols_exist(["Life Expectancy", "Infant Mortality Rate", "Under 5 Mortality Rate", "Death Rate"])
@@ -409,7 +379,6 @@ elif page == "📋 Country Profile":
             fig = px.line(country_df, x="Year", y=m, markers=True, title=m)
             st.plotly_chart(fig, use_container_width=True)
 
-    # ---- pollution ----
     with tab_pollution:
         st.subheader("Air Pollution (age-standardised)")
         metrics_to_plot = cols_exist([
@@ -430,7 +399,6 @@ elif page == "📋 Country Profile":
             fig = px.line(long_df, x="Year", y="Rate", color="Cause", markers=True)
             st.plotly_chart(fig, use_container_width=True)
 
-    # ---- demography & maternal ----
     with tab_demo:
         st.subheader("Demography & Maternal / Child Health")
 
@@ -454,7 +422,6 @@ elif page == "📋 Country Profile":
                 fig = px.line(country_df, x="Year", y=m, markers=True, title=m)
                 st.plotly_chart(fig, use_container_width=True)
 
-    # ---- economics ----
     with tab_econ:
         st.subheader("Economics & Poverty")
         econ_cols = cols_exist(["GDP per Capita", "Income per Capita", "GNI per Capita"])
@@ -477,17 +444,14 @@ elif page == "📋 Country Profile":
                 fig.update_layout(title="Persentase penduduk di bawah garis kemiskinan")
                 st.plotly_chart(fig, use_container_width=True)
 
-    # ---- diet ----
     with tab_diet:
         st.subheader("Diet Composition & Macros")
 
-        # Gabungan semua kolom diet yang mungkin ada
         diet_cols_all = [
             c for c in (diet_composition + diet_macros)
             if c in country_df.columns
         ]
 
-        # Cari tahun terakhir yang PUNYA data diet (tidak semua NaN)
         diet_years = []
         for y in sorted(country_df["Year"].unique()):
             sub_y = country_df[country_df["Year"] == y]
@@ -507,7 +471,6 @@ elif page == "📋 Country Profile":
 
             c1, c2 = st.columns(2)
 
-            # --- Grafik komposisi diet ---
             with c1:
                 comp_cols = [
                     c for c in diet_composition
@@ -531,7 +494,6 @@ elif page == "📋 Country Profile":
                 else:
                     st.info("Tidak ada data komposisi diet untuk tahun ini.")
 
-            # --- Grafik makro kalori ---
             with c2:
                 macro_cols = [
                     c for c in diet_macros
@@ -554,11 +516,6 @@ elif page == "📋 Country Profile":
                     st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.info("Tidak ada data kalori makro untuk tahun ini.")
-
-
-# ============================================================
-#                      COMPARE COUNTRIES
-# ============================================================
 
 elif page == "📈 Compare Countries":
     st.header("📈 Compare Countries")
@@ -619,18 +576,12 @@ elif page == "📈 Compare Countries":
             fig2 = px.bar(bar_df, x="Country", y=metric, color="Country", title=f"{metric} pada {year_bar}")
             st.plotly_chart(fig2, use_container_width=True)
 
-
-# ============================================================
-#                     NUTRITION & DIET
-# ============================================================
-
 elif page == "🥦 Nutrition & Diet":
     st.header("🥦 Nutrition & Diet")
     st.write("Eksplorasi pola konsumsi makanan dan hubungannya dengan kesehatan / ekonomi.")
 
     col1, col2 = st.columns(2)
     with col1:
-        # tahun dibatasi hanya periode yang memang punya data diet
         year = st.slider("Tahun:", diet_min_year, diet_max_year, diet_max_year)
     with col2:
         gender = st.selectbox("Gender:", options=all_genders)
@@ -645,7 +596,6 @@ elif page == "🥦 Nutrition & Diet":
     if selected_countries:
         base = base[base["Country"].isin(selected_countries)]
 
-    # Indikator diet dan health yang benar-benar punya data di filter ini
     diet_candidates = cols_exist(diet_composition + diet_fruit + diet_veg_cereal)
     health_candidates = cols_exist(health_core + economics)
 
@@ -660,7 +610,6 @@ elif page == "🥦 Nutrition & Diet":
 
         plot_df = base.dropna(subset=[x_axis, y_axis])
 
-        # buang outlier ekstrim supaya grafik lebih enak dilihat
         for col in [x_axis, y_axis]:
             q1 = plot_df[col].quantile(0.01)
             q99 = plot_df[col].quantile(0.99)
@@ -681,11 +630,6 @@ elif page == "🥦 Nutrition & Diet":
             cols_show = ["Country", x_axis, y_axis] + cols_exist(["GDP per Capita"])
             st.dataframe(plot_df[cols_show].sort_values(y_axis, ascending=False))
 
-
-# ============================================================
-#                    DEMOGRAPHY & WASH
-# ============================================================
-
 elif page == "🚰 Demography & WASH":
     st.header("🚰 Demography & WASH")
     st.write("Kondisi demografi, akses air minum, sanitasi, dan energi bersih.")
@@ -702,7 +646,6 @@ elif page == "🚰 Demography & WASH":
 
     base = df[(df["Country"] == country) & (df["Gender"] == gender)]
 
-    # Tahun dibatasi ke periode di mana data WASH ada
     years_country_wash = sorted(
         y for y in years_wash if y in base["Year"].unique()
     )
@@ -762,11 +705,6 @@ elif page == "🚰 Demography & WASH":
             fig.update_layout(xaxis_tickangle=-45)
             st.plotly_chart(fig, use_container_width=True)
 
-
-# ============================================================
-#                   ECONOMICS & POVERTY
-# ============================================================
-
 elif page == "💰 Economics & Poverty":
     st.header("💰 Economics & Poverty")
     st.write("Ikhtisar indikator ekonomi makro, kemiskinan, dan belanja pemerintah.")
@@ -818,11 +756,6 @@ elif page == "💰 Economics & Poverty":
                 fig = px.line(base, x="Year", y=m, markers=True, title=m)
                 st.plotly_chart(fig, use_container_width=True)
 
-
-# ============================================================
-#                    CORRELATION EXPLORER
-# ============================================================
-
 elif page == "📊 Correlation Explorer":
     st.header("📊 Correlation Explorer")
     st.write("Pilih subset indikator untuk melihat hubungan antar variabel.")
@@ -839,7 +772,6 @@ elif page == "📊 Correlation Explorer":
     if country_filter:
         base = base[base["Country"].isin(country_filter)]
 
-    # pilih kolom numerik yang punya cukup data
     candidate = [c for c in numeric_cols if c not in ["Year"]]
     avail_vars = [c for c in candidate if base[c].notna().sum() >= 20]
 
@@ -892,11 +824,6 @@ elif page == "📊 Correlation Explorer":
         st.plotly_chart(fig_scatter, use_container_width=True)
     else:
         st.info("Pilih minimal dua indikator untuk melihat korelasi.")
-
-
-# ============================================================
-#                     DATA & DOWNLOAD
-# ============================================================
 
 elif page == "📑 Data & Download":
     st.header("📑 Data & Download")
